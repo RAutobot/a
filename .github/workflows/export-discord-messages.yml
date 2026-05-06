@@ -1,0 +1,48 @@
+name: Export Discord Messages
+on:
+  workflow_dispatch:
+    inputs:
+      guild_ids:
+        description: Guild ids (separated by spaces)
+      channel_ids:
+        description: Channel ids (separated by spaces)
+      filter:
+        description: Filter
+
+jobs:
+  export-discord-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up DiscordChatExporter
+        run: |
+          curl -sSLOJ https://github.com/Tyrrrz/DiscordChatExporter/releases/latest/download/DiscordChatExporter.Cli.linux-x64.zip
+          unzip -q DiscordChatExporter.Cli.linux-x64.zip
+
+      - name: Export Discord messages
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          GUILD_IDS: ${{ inputs.guild_ids }}
+          CHANNEL_IDS: ${{ inputs.channel_ids }}
+          FILTER: ${{ inputs.filter }}
+        run: |
+          for guild_id in $GUILD_IDS; do
+            ./DiscordChatExporter.Cli exportguild -g "$guild_id" -f Json -o output/ --fuck-russia --filter "$filter" --locale id-ID
+          done
+
+          if [[ -n "$CHANNEL_IDS" ]]; then
+            ./DiscordChatExporter.Cli export -c $CHANNEL_IDS -f Json -o output/ --fuck-russia --filter "$filter" --locale id-ID
+          fi
+
+          for file in output/*.json; do
+            jq -j '.messages[] | select(.author.isBot | not) | [
+              "[\(.timestamp[:16] | sub("T"; " "))][\(.author.nickname)]",
+              (.content | gsub("\n"; " ")),
+              .attachments[].fileName
+            ] | map(select(. != "")) | join(" ")' "$file" > "${file%.json}.txt"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: output
+          path: output/*.txt

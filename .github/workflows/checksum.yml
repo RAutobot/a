@@ -1,0 +1,22 @@
+name: Checksum
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: File URL
+        required: true
+
+jobs:
+  checksum:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download file
+        env:
+          FILE_URL: ${{ inputs.file_url }}
+        run: 7z x -bso0 "$(curl -sSLOJ -w "%{filename_effective}" "$FILE_URL")"
+
+      - name: Checksum (MD5)
+        run: find . -type f -exec cksum -a md5 {} +
+
+      - name: Checksum (SHA256)
+        run: find . -type f -exec cksum -a sha256 {} +
