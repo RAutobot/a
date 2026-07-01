@@ -1,0 +1,33 @@
+name: Assemble TMCW
+on: workflow_dispatch
+
+jobs:
+  assemble-tmcw:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set up TMCW
+        run: |
+          filename="$(curl -sSLO -w "%{filename_effective}" "https://www.dropbox.com/scl/fi/tssvedc0xhb6dk6anap41/TMCWv5.10.zip?rlkey=rf98ln8zcmn52kttvv7mb1umg&dl=1")"
+          unzip -q "$filename"
+
+          printf "%s\n" "VERSION_NAME=${filename%.*}" >> "$GITHUB_ENV"
+
+      - name: Download vanilla 1.6.4 JAR
+        run: curl -sSL -o "$VERSION_NAME.jar" "https://launcher.mojang.com/v1/objects/1703704407101cf72bd88e68579e3696ce733ecd/client.jar"
+
+      - name: Assemble TMCW
+        run: |
+          zip -q -d "$VERSION_NAME.zip" "Mod/*"
+
+          (cd Mod && zip -q -r "../$VERSION_NAME.jar" .)
+          zip -q -d "$VERSION_NAME.jar" "META-INF/*"
+
+          zip -q "$VERSION_NAME.zip" "$VERSION_NAME.jar"
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: outputs
+          files: ${{ env.VERSION_NAME }}.zip
