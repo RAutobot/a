@@ -30,7 +30,7 @@ jobs:
 
       - name: Download video
         run: |
-          filename="$(curl -sSLOJ -b "${{ inputs.cookies }}" -w "%{filename_effective}" "${{ matrix.video-url }}")"
+          filename="$(curl -sSLOJ -w "%{filename_effective}" -b "${{ inputs.cookies }}" "${{ matrix.video-url }}")"
           printf "%s\n" "INPUT_FILE=$filename" "OUTPUT_FILE=${filename%.*}.mkv" >> "$GITHUB_ENV"
 
       - name: Compress video
